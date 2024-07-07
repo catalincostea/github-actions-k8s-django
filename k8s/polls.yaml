@@ -12,10 +12,27 @@ spec:
       labels:
         app: polls
     spec:
+      initContainers:  # Add the initContainers section here
+      - name: init
+        image: catalincostea/django-voting-app
+        # image: local-registry/django-polls:latest
+        # imagePullPolicy: Never
+        env:
+          - name: SECRET_KEY
+            value: "mysecretkey"
+          - name: POSTGRES_DB
+            value: pollsdb
+          - name: POSTGRES_USER
+            value: postgres
+          - name: POSTGRES_PASSWORD
+            value: postgres
+        command: ["/bin/sh"]
+        args: ["-c", "./start.sh"]
       containers:
       - name: django-polls
-        image: local-registry/django-polls:latest
-        imagePullPolicy: Never
+        image: catalincostea/django-voting-app
+        # image: local-registry/django-polls:latest
+        # imagePullPolicy: Never
         ports:
         - containerPort: 8000
         env:
@@ -27,9 +44,11 @@ spec:
             value: postgres
           - name: POSTGRES_PASSWORD
             value: postgres
-        command: ["/bin/sh"]
+        # command: ["/bin/sh"]
         # args: ["-c", "tail -f /dev/null"]
-        args: ["-c", "./start.sh"]
+        # args: ["-c", "./start.sh"]
+        command: ["uwsgi"]
+        args: ["--ini", "uwsgi.ini"]
 
 ---
 apiVersion: v1
