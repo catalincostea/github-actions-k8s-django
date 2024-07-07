@@ -1,0 +1,83 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-backup-script
+data:
+  backup.sh: |
+    #!/bin/bash
+    set -e
+
+    BACKUP_DIR=/backups
+    BACKUP_NAME=backup-$(date +%Y%m%d%H%M%S).sql
+    export PGPASSWORD=${POSTGRES_PASSWORD}
+
+    echo Backup starting ..
+    echo pg_dump -h ${POSTGRES_HOST} -U ${POSTGRES_USER} -d ${POSTGRES_DB} -w
+    pg_dump -h ${POSTGRES_HOST} -U ${POSTGRES_USER} -d ${POSTGRES_DB} -w > ${BACKUP_DIR}/${BACKUP_NAME}
+
+    echo Clean up old backups ..
+    find ${BACKUP_DIR} -type f -mtime +7 -name '*.sql' -exec rm -f {} \;
+
+    echo "Backup ${BACKUP_NAME} completed."
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+spec:
+  # schedule: "0 2 * * *"
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: backup
+              image: postgres:12        # Use the same db ver
+              command: ["/bin/bash", "/backup/backup.sh"]
+              # command: ["sleep", "300"]
+              env:
+                - name: POSTGRES_DB
+                  value: "pollsdb"
+                - name: POSTGRES_USER
+                  value: "postgres"
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: postgres-password
+                - name: POSTGRES_HOST
+                  value: "db"
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backups
+                - name: backup-script
+                  mountPath: /backup/backup.sh
+                  subPath: backup.sh
+                  readOnly: true
+          restartPolicy: OnFailure
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc
+            - name: backup-script
+              configMap:
+                name: postgres-backup-script
+                items:
+                  - key: backup.sh
+                    path: backup.sh
+                defaultMode: 0755
