@@ -1,8 +1,42 @@
-# posgress / minikube
+
+# Requirements and design
+
+This project plans to offer a solution to run a workload into an easy to maintain and cost free implementation of K8s.
+Key points:
+  - run K8s on a local PC(e.g. w/ Minikube, Kind, Rancher.. etc)
+  - find a secure way to expose services for public access (found CloudFlare Tunnel / Zero Trust)
+  - easy and quick deploy and cleanup
+  - open source / zero costs
+
+
+1. Deploy sample application to the Kubernetes cluster
+
+Check docs/*png for design and implementation details
+
+CI/CD implementation is minimal, consisting in GitHub actions build triggered by git push and K8s Always pull policy for docker images.
+
+Data security is covered by a combination of Externals Secrets + Vault(HashiCorp) operators. An initial manual setup is required for Vault to provision the initial secrets at the moment.
+
+
+2. Design a backup process/solution
+
+The implementation is minimal for simplicity, by a cronjob that periodically performs a Postgres DB backup.
+Some implementation details are:
+  - PersistenVolumes/Claims are used for data persistency
+  - Postgres uses the same version for main DB and backup tools
+  - backup tools is pg_dump for simplicity
+  - a cleanup mechanism is also put in place
+  - the backup script is available as a configmap
+
+
+
+# Implementation details
+
+## posgress / minikube
 https://gist.github.com/ivanbrennan/cf20e26de6e7cbf517d101e7cc9d4ca0
 
 
-# github actions / minikube
+## github actions / minikube
 https://minikube.sigs.k8s.io/docs/tutorials/setup_minikube_in_github_actions/
 
 
