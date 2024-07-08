@@ -27,15 +27,4 @@ jobs:
 
       - name: Push Docker image to Docker Hub
         run: |
-          # echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
           docker push catalincostea/django-voting-app:latest
-
-      # - name: Deploy to Kubernetes
-      #   uses: appleboy/kubectl-action@v0.2.0
-      #   with:
-      #     kubeconfig: ${{ secrets.KUBE_CONFIG_DATA }}
-      #     command: apply
-      #     args: -f kubernetes/deployment.yaml
-
-      # - name: Check deployment status
-      #   run: kubectl rollout status deployment/django-voting-app --kubeconfig=${{ secrets.KUBE_CONFIG_DATA }}

@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+type: Opaque
+data:
+  postgres-password: bm90X3Bvc3RncmVzCg== # not_postgres, but gets overwritten by external secret
+
+
+---
+# https://github.com/digitalocean/Kubernetes-Starter-Kit-Developers/blob/main/06-kubernetes-secrets/external-secrets-operator.md
+
+# kubectl create secret generic vault-token --from-literal=token=<YOUR_VAULT_TOKEN>
+# kubectl create secret generic vault-token --from-literal=token=hvs...
+
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: vault-backend
+spec:
+  provider:
+    vault:
+      server: "http://vault.vault.svc.cluster.local:8200"
+      path: "kv"
+      version: "v2"
+      auth:
+        tokenSecretRef:
+          name: vault-token   # populated by setup/vault.sh
+          key: token          # k get secret vault-token > data: token: ..
+
+
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: es-mongo
+spec:
+  refreshInterval: "15s"
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: postgres-secret # k8s target to be updated
+    creationPolicy: Owner
+  data:
+    - secretKey: postgres-secret
+      remoteRef:
+        key: postgres
+        property: postgres-secret
+        # key: secret/secret_key
+        # property: secret_data
+
+# TKN="hvs.."
+# curl --header "X-Vault-Token: $TKN" --request GET  http://vault.vault.svc.cluster.local:8200/v1/kv/data/postgres
+

@@ -61,3 +61,27 @@ spec:
   selector:
     app: postgres
   clusterIP: None  # sts headless svc
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migration-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: django-init
+        image: catalincostea/django-voting-app
+        env:
+          - name: SECRET_KEY
+            value: "mysecretkey"
+          - name: POSTGRES_DB
+            value: pollsdb
+          - name: POSTGRES_USER
+            value: postgres
+          - name: POSTGRES_PASSWORD
+            value: postgres
+        command: ["/bin/sh"]
+        args: ["-c", "./start.sh"]
+      restartPolicy: OnFailure
